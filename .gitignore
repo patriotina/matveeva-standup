@@ -1,0 +1,12 @@
+# Локальный запуск: .env собирается из deploy/prod.env, чтобы не держать
+# второй источник домена и прочих настроек.
+.env
+
+# Локальный оверрайд compose
+docker-compose.override.yml
+
+.vscode
+.idea
+
+*.log
+.DS_Store

@@ -1,0 +1,63 @@
+# Деплой лендинга Standup-setup.exe на тот же хостинг, где работает Traefik
+# (github.com/patriotina/traefik-proxy) и соседние проекты.
+#
+# Сайт — чистая статика, поэтому без сборки образа: nginx:alpine официальный,
+# а содержимое сайта монтируется из ./site. Деплой сводится к копированию
+# файлов на сервер и `docker compose up -d`.
+#
+# Сеть public создаётся Traefik. Compose не должен её удалять.
+#
+# Локальная проверка без Traefik:
+#   cp deploy/prod.env .env && docker compose -f docker-compose.deploy.yml up
+#   open http://localhost:8081
+
+services:
+  web:
+    image: nginx:1.30-alpine
+    # На сервере образ всегда тянется из реестра: иначе compose возьмёт
+    # локальный кэш и останется на старой версии nginx.
+    pull_policy: ${PULL_POLICY:-always}
+    restart: unless-stopped
+    container_name: ${PROJECT_NAME}-${ENVIRONMENT}
+    volumes:
+      # Каталог, а не отдельные файлы: при добавлении styles.css или картинок
+      # ничего не нужно менять в compose, файлы просто появятся на сайте.
+      - ./site:/usr/share/nginx/html:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - public
+    # Labels списком, а не словарём: в словарной форме Compose подставляет
+    # переменные в значения, но НЕ в ключи. В списке интерполируется всё.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-public}"
+
+      # HTTPS-маршрут
+      - "traefik.http.routers.${PROJECT_NAME}-${ENVIRONMENT}-web.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.${PROJECT_NAME}-${ENVIRONMENT}-web.entrypoints=websecure"
+      - "traefik.http.routers.${PROJECT_NAME}-${ENVIRONMENT}-web.tls=true"
+      - "traefik.http.routers.${PROJECT_NAME}-${ENVIRONMENT}-web.tls.certresolver=${CERT_RESOLVER:-letsencrypt}"
+      - "traefik.http.routers.${PROJECT_NAME}-${ENVIRONMENT}-web.service=${PROJECT_NAME}-${ENVIRONMENT}-web"
+
+      # HTTP -> HTTPS. Свой middleware на каждый проект: глобального редиректа
+      # на entrypoint web может не быть.
+      - "traefik.http.routers.${PROJECT_NAME}-${ENVIRONMENT}-web-http.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.${PROJECT_NAME}-${ENVIRONMENT}-web-http.entrypoints=web"
+      - "traefik.http.routers.${PROJECT_NAME}-${ENVIRONMENT}-web-http.middlewares=${PROJECT_NAME}-${ENVIRONMENT}-redirect"
+      - "traefik.http.middlewares.${PROJECT_NAME}-${ENVIRONMENT}-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.${PROJECT_NAME}-${ENVIRONMENT}-redirect.redirectscheme.permanent=true"
+
+      # Внутренний порт nginx
+      - "traefik.http.services.${PROJECT_NAME}-${ENVIRONMENT}-web.loadbalancer.server.port=80"
+    healthcheck:
+      # wget есть в alpine по умолчанию. Проверяем, что nginx реально отдаёт
+      # главную, а не просто слушает порт.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+networks:
+  public:
+    external: true

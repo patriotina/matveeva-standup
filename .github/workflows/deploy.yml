@@ -1,0 +1,148 @@
+name: Deploy Standup landing
+
+# Схема как у соседних проектов: main -> prod.
+#
+# Откат — через git revert и повторный деплой: сайт статический, отдельный
+# механизм версий ему не нужен.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  APP_DIR: /opt/standup-prod
+
+jobs:
+  # Настройки окружения читаются из deploy/prod.env, чтобы домен и имя
+  # проекта жили в одном файле, а не дублировались здесь.
+  config:
+    runs-on: ubuntu-latest
+    outputs:
+      domain: ${{ steps.env.outputs.domain }}
+      container: ${{ steps.env.outputs.container }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Read environment settings
+        id: env
+        run: |
+          file=deploy/prod.env
+          if [ ! -f "$file" ]; then
+            echo "::error::Нет файла настроек $file"
+            exit 1
+          fi
+
+          # Не source: файл только читаем, чтобы не исполнять его содержимое.
+          domain=$(sed -n 's/^DOMAIN=//p' "$file")
+          project=$(sed -n 's/^PROJECT_NAME=//p' "$file")
+          environment=$(sed -n 's/^ENVIRONMENT=//p' "$file")
+
+          for pair in "DOMAIN:$domain" "PROJECT_NAME:$project" "ENVIRONMENT:$environment"; do
+            if [ -z "${pair#*:}" ]; then
+              echo "::error::В $file не задано ${pair%%:*}"
+              exit 1
+            fi
+          done
+
+          # Имя контейнера должно совпадать с container_name в compose:
+          # по нему workflow ждёт healthcheck.
+          container="${project}-${environment}"
+
+          {
+            echo "domain=$domain"
+            echo "container=$container"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Домен: $domain, контейнер: $container"
+
+  deploy:
+    needs: config
+    runs-on: ubuntu-latest
+    environment: prod
+    # Деплои не наезжают друг на друга: два push подряд не должны
+    # перемешивать файлы на сервере.
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Copy site and compose files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          # deploy/ нужен на сервере: из него собирается .env.
+          # site/ копируется целиком, включая styles.css, когда его пришлют.
+          source: "site,nginx,deploy,docker-compose.deploy.yml"
+          target: "${{ env.APP_DIR }}/"
+          overwrite: true
+          # Не удаляем целевой каталог: лишний риск для работающего сайта,
+          # а устаревшие файлы статики безвредны.
+          rm: false
+
+      - name: Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DOMAIN: ${{ needs.config.outputs.domain }}
+          CONTAINER: ${{ needs.config.outputs.container }}
+          APP_DIR: ${{ env.APP_DIR }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          envs: DOMAIN,CONTAINER,APP_DIR
+          script: |
+            set -euo pipefail
+
+            cd "$APP_DIR"
+
+            # .env собираем из deploy/prod.env при каждом деплое: правка
+            # домена или имени проекта в репозитории доезжает сама.
+            install -m 600 deploy/prod.env .env
+
+            # config до пересоздания контейнера: покажет ошибку в .env или
+            # compose, не уронив работающий сайт.
+            docker compose -f docker-compose.deploy.yml config > /dev/null
+
+            docker compose -f docker-compose.deploy.yml pull
+            docker compose -f docker-compose.deploy.yml up -d --remove-orphans
+
+            # Ждём healthcheck: он подтверждает, что nginx отдаёт главную.
+            STATE=starting
+            for i in $(seq 1 30); do
+              STATE=$(docker inspect --format '{{.State.Health.Status}}' "$CONTAINER" 2>/dev/null || echo starting)
+              [ "$STATE" = healthy ] && break
+              if [ "$STATE" = unhealthy ]; then
+                echo "❌ Контейнер стал unhealthy"
+                docker logs --tail 50 "$CONTAINER"
+                exit 1
+              fi
+              sleep 2
+            done
+            if [ "$STATE" != healthy ]; then
+              echo "❌ Не дождались healthy (последнее состояние: $STATE)"
+              docker logs --tail 50 "$CONTAINER"
+              exit 1
+            fi
+
+            # Внешняя проверка: подтверждает, что Traefik выпустил сертификат
+            # и маршрут работает. -k: сертификат мог быть выпущен только что.
+            CODE=$(curl -sk -o /dev/null -w '%{http_code}' "https://${DOMAIN}/")
+            if [ "$CODE" != "200" ]; then
+              echo "❌ Главная вернула $CODE"
+              docker compose -f docker-compose.deploy.yml logs --tail=50
+              exit 1
+            fi
+
+            # HTTP должен редиректить на HTTPS, а не отдавать 200.
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' "http://${DOMAIN}/")
+            if [ "$CODE" != "301" ] && [ "$CODE" != "308" ]; then
+              echo "⚠️ http://${DOMAIN}/ вернул $CODE вместо редиректа"
+            fi
+
+            echo "✅ prod deployed successfully!"
+            echo "🌐 https://${DOMAIN}"

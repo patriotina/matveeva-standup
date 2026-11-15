@@ -1,0 +1,24 @@
+# Локальный запуск без Traefik и без внешней сети public.
+#
+#   docker compose -f docker-compose.deploy.yml -f docker-compose.dev.yml up
+#   open http://localhost:8081
+#
+# Отдельный файл, а не профили, чтобы в проде compose не знал о лишнем
+# опубликованном порте: случайный запуск основного файла не откроет
+# сайт в обход Traefik.
+
+services:
+  web:
+    # На локальной машине тянуть образ при каждом запуске не нужно.
+    pull_policy: missing
+    ports:
+      - "8081:80"
+    # Labels из основного файла локально остаются, но без Traefik они
+    # ни на что не влияют — специально чистить их не нужно.
+
+networks:
+  # На сервере сеть создаёт Traefik. Локально создаём свою, чтобы
+  # compose не падал на external: true.
+  public:
+    external: false
+    name: standup-local
