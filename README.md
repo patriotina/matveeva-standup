@@ -5,7 +5,7 @@
 
 ## Как это работает
 
-Сайт — два файла без сборки. На сервере их отдаёт официальный `nginx:alpine`,
+Сайт — статические файлы без сборки. На сервере их отдаёт официальный `nginx:alpine`,
 запущенный в Docker Compose и подключённый к внешней сети `public`, где уже
 работает Traefik. Traefik терминирует TLS (Let's Encrypt, HTTP-01) и
 проксирует запросы в контейнер.
@@ -19,17 +19,22 @@ push в main ──> GitHub Actions ──scp──> /opt/standup-prod
 ```
 
 Никакой сборки образа и реестра: деплой — это копирование файлов и
-`docker compose up -d`. Стили (`styles.css`) и картинки, когда их пришлют,
-достаточно положить в `site/` — они уедут при следующем деплое.
+`docker compose up -d`. Любой новый файл достаточно положить в `site/` —
+он уедет при следующем деплое.
 
 ## Структура
 
 ```text
 site/                     содержимое сайта (монтируется в /usr/share/nginx/html)
   index.html
-  script.js
-  styles.css              ← ожидается, пока не прислан
+  style.css               стили: единственный источник, в HTML не дублируются
+  script.js               меню на мобильных + отправка формы
+  favicon.ico/.svg        иконка вкладки (svg + растровый запас)
+  apple-touch-icon.png    иконка для iOS
+  icon-192.png            иконка для Android/манифеста
+  robots.txt
 nginx/default.conf        конфиг nginx: gzip, кэширование, try_files
+nginx/security-headers.conf  CSP, HSTS, X-Content-Type-Options и др.
 docker-compose.deploy.yml прод: Traefik labels, внешняя сеть public
 docker-compose.dev.yml    локальный запуск без Traefik (порт 8081)
 deploy/prod.env           единственный источник настроек окружения
@@ -90,10 +95,32 @@ Settings → Secrets and variables → Actions, secrets:
 3. `https://<домен>/` → 200 (то есть Traefik выпустил сертификат и маршрут жив).
 4. `http://<домен>/` → 301/308 (редирект на HTTPS); иначе предупреждение.
 
+## Форма регистрации
+
+Заявки уходят в Google Apps Script, который пишет строку в Google Таблицу.
+Адрес веб-приложения — в атрибуте `action` формы в `site/index.html`.
+
+Контракт, который важно не нарушить при правках:
+
+- скрипт ждёт `application/x-www-form-urlencoded`; на `multipart/form-data`
+  (то есть на обычную `FormData`) он отвечает `405`;
+- поля: `surname`, `name`, `contact`, `occupation`, `consent=on`;
+- ответ — JSON `{"ok":true}` или `{"ok":false,"error":"причина"}`;
+- Apps Script редиректит на `script.googleusercontent.com`, и оба ответа
+  отдают `Access-Control-Allow-Origin: *`, поэтому ответ читается из браузера.
+
+Скрипт проверяет `ok === true`, а не только HTTP-статус: иначе отказ
+валидации («уже регистрировались», «нужно согласие») выглядел бы как успех.
+
+Проверить endpoint вручную:
+
+```bash
+curl -L --data-urlencode 'surname=Тест' --data-urlencode 'name=Тест' \
+  --data-urlencode 'contact=@test' --data-urlencode 'occupation=QA' \
+  --data-urlencode 'consent=on' "<URL из action>"
+```
+
 ## Что осталось сделать
 
-- [ ] Положить `styles.css` в `site/` — сейчас страница отдаётся без вёрстки
-      (nginx вернёт 404 на этот файл).
-- [ ] Форма регистрации: `data-sheets-endpoint` в `site/index.html` пустой,
-      отправка показывает «интеграция ещё не настроена». Нужен URL
-      веб-приложения Google Apps Script.
+- [ ] Заменить текст политики конфиденциальности на согласованный с юристом,
+      если он появится. Сейчас это краткая формулировка в футере.

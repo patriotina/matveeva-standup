@@ -24,6 +24,7 @@ services:
       # ничего не нужно менять в compose, файлы просто появятся на сайте.
       - ./site:/usr/share/nginx/html:ro
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/security-headers.conf:/etc/nginx/conf.d/security-headers.conf:ro
     networks:
       - public
     # Labels списком, а не словарём: в словарной форме Compose подставляет

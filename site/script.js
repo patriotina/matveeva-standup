@@ -1,61 +1,139 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('registration-form');
-  const messageEl = document.getElementById('form-message');
+// Лендинг — одна страница, поэтому весь скрипт живёт здесь.
+// Форма отправляется в Google Apps Script, который пишет заявку в таблицу.
+(() => {
+  'use strict';
 
-  if (form && messageEl) {
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
+  /**
+   * Мобильное меню.
+   *
+   * До 768px навигация не помещается в строку шапки, и страница получала
+   * горизонтальный скролл. Кнопка открывает панель под шапкой; закрываем её
+   * по повторному нажатию, по клику на ссылку и по Esc.
+   */
+  const navToggle = document.querySelector('.nav-toggle');
+  const mainNav = document.getElementById('main-nav');
 
-      const surname = form.querySelector('#surname')?.value.trim();
-      const name = form.querySelector('#name')?.value.trim();
-      const contact = form.querySelector('#contact')?.value.trim();
-      const occupation = form.querySelector('#occupation')?.value.trim();
-      const consent = form.querySelector('input[name="consent"]')?.checked;
+  if (navToggle && mainNav) {
+    const setOpen = (open) => {
+      navToggle.setAttribute('aria-expanded', String(open));
+      navToggle.setAttribute('aria-label', open ? 'Закрыть меню' : 'Открыть меню');
+      mainNav.classList.toggle('is-open', open);
+    };
 
-      if (!surname || !name || !contact || !occupation) {
-        messageEl.textContent = 'Пожалуйста, заполните все обязательные поля формы.';
-        messageEl.className = 'form-message is-error';
-        return;
-      }
+    navToggle.addEventListener('click', () => {
+      setOpen(navToggle.getAttribute('aria-expanded') !== 'true');
+    });
 
-      if (!consent) {
-        messageEl.textContent = 'Необходимо подтвердить согласие на обработку персональных данных.';
-        messageEl.className = 'form-message is-error';
-        return;
-      }
+    // Переход по ссылке закрывает панель: иначе она висела бы поверх контента.
+    mainNav.addEventListener('click', (event) => {
+      if (event.target.closest('a')) setOpen(false);
+    });
 
-      const submitBtn = form.querySelector('.form-submit');
-      const originalText = submitBtn ? submitBtn.innerHTML : '';
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span>Отправка данных...</span>';
-      }
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    });
 
-      messageEl.textContent = 'Передаём заявку...';
-      messageEl.className = 'form-message';
-
-      try {
-        const formData = new FormData(form);
-        const actionUrl = form.getAttribute('action') || 'https://standup.izhdigital.ru/';
-
-        await fetch(actionUrl, {
-          method: 'POST',
-          mode: 'no-cors',
-          body: formData
-        });
-
-        messageEl.textContent = 'Заявка успешно отправлена! Организаторы свяжутся с вами для подтверждения.';
-        messageEl.className = 'form-message is-success';
-        form.reset();
-      } catch (err) {
-        messageEl.textContent = 'Не удалось связаться с сервером. Попробуйте ещё раз чуть позже.';
-        messageEl.className = 'form-message is-error';
-      } finally {
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.innerHTML = originalText;
-        }
-      }
+    // При переходе на десктопную ширину панель должна вернуться в исходное
+    // состояние, иначе кнопка останется в режиме «крестик».
+    const desktop = window.matchMedia('(min-width: 768px)');
+    desktop.addEventListener('change', (event) => {
+      if (event.matches) setOpen(false);
     });
   }
-});
+
+  const form = document.getElementById('registration-form');
+  const messageEl = document.getElementById('form-message');
+  if (!form || !messageEl) return;
+
+  const submitButton = form.querySelector('.form-submit');
+
+  const setMessage = (text, state) => {
+    messageEl.textContent = text;
+    messageEl.className = state ? `form-message is-${state}` : 'form-message';
+  };
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const data = new FormData(form);
+    const surname = String(data.get('surname') || '').trim();
+    const name = String(data.get('name') || '').trim();
+    const contact = String(data.get('contact') || '').trim();
+    const occupation = String(data.get('occupation') || '').trim();
+
+    if (!surname || !name || !contact || !occupation) {
+      setMessage('Заполните все обязательные поля.', 'error');
+      return;
+    }
+
+    if (!data.get('consent')) {
+      setMessage('Без согласия на обработку данных заявку принять нельзя.', 'error');
+      return;
+    }
+
+    const endpoint = (form.getAttribute('action') || '').trim();
+    if (!endpoint) {
+      // Предохранитель: без адреса отправлять некуда, лучше сказать честно,
+      // чем показать «заявка отправлена».
+      setMessage('Регистрация временно недоступна. Напишите организаторам напрямую.', 'error');
+      return;
+    }
+
+    const originalLabel = submitButton ? submitButton.innerHTML : '';
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.innerHTML = '<span>Отправка…</span>';
+    }
+    setMessage('Передаём заявку…');
+
+    try {
+      // Apps Script читает поля из form-urlencoded, а не из multipart:
+      // на multipart он отвечает 405.
+      const body = new URLSearchParams();
+      body.set('surname', surname);
+      body.set('name', name);
+      body.set('contact', contact);
+      body.set('occupation', occupation);
+      body.set('consent', 'on');
+
+      // text/plain не вызывает preflight. Apps Script редиректит на
+      // script.googleusercontent.com и отдаёт JSON с Access-Control-Allow-Origin,
+      // поэтому ответ читается обычным fetch.
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+        redirect: 'follow'
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      // Скрипт возвращает {ok:true} или {ok:false,error:"причина"}. Без этой
+      // проверки любая ошибка валидации выглядела бы как успешная отправка.
+      let result = null;
+      try {
+        result = await response.json();
+      } catch {
+        // Ответ не JSON (например, страница логина Google) — это не успех.
+        throw new Error('Unexpected response');
+      }
+
+      if (!result || result.ok !== true) {
+        setMessage(result && result.error ? result.error : 'Не удалось отправить заявку. Попробуйте ещё раз.', 'error');
+        return;
+      }
+
+      form.reset();
+      setMessage('Заявка отправлена. Организаторы свяжутся с вами для подтверждения.', 'success');
+    } catch {
+      setMessage('Не удалось отправить заявку. Попробуйте ещё раз или напишите организаторам напрямую.', 'error');
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalLabel;
+      }
+    }
+  });
+})();

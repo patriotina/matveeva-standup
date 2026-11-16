@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="standup-setup.exe">
+  <rect width="64" height="64" rx="13" fill="#10110f"/>
+  <g fill="none" stroke="#d5ff3f" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="16,19 30,32 16,45"/>
+    <line x1="35" y1="45" x2="49" y2="45"/>
+  </g>
+</svg>

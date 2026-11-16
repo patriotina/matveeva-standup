@@ -90,6 +90,7 @@ a {
 }
 
 .header-inner {
+  position: relative;
   height: 68px;
   display: flex;
   align-items: center;
@@ -134,6 +135,71 @@ a {
 .main-nav a:hover,
 .main-nav a:focus-visible {
   color: var(--accent);
+}
+
+/* Кнопка меню. На десктопе не нужна: навигация видна целиком. */
+.nav-toggle {
+  display: none;
+  width: 44px;
+  height: 44px;
+  margin-left: auto;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-toggle:hover,
+.nav-toggle:focus-visible {
+  border-color: var(--border-strong);
+}
+
+/* Три полоски рисуем псевдоэлементами одного span: так проще
+   анимировать их в крестик без лишней разметки. */
+.nav-toggle-bar,
+.nav-toggle-bar::before,
+.nav-toggle-bar::after {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+  transition: transform 200ms ease, opacity 150ms ease;
+}
+
+.nav-toggle-bar::before,
+.nav-toggle-bar::after {
+  content: "";
+  position: absolute;
+}
+
+.nav-toggle-bar {
+  position: relative;
+}
+
+.nav-toggle-bar::before {
+  top: -6px;
+}
+
+.nav-toggle-bar::after {
+  top: 6px;
+}
+
+.nav-toggle[aria-expanded="true"] .nav-toggle-bar {
+  background: transparent;
+}
+
+.nav-toggle[aria-expanded="true"] .nav-toggle-bar::before {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.nav-toggle[aria-expanded="true"] .nav-toggle-bar::after {
+  transform: translateY(-6px) rotate(-45deg);
 }
 
 /* Hero */
@@ -679,6 +745,43 @@ h2 span {
   color: var(--text-dim);
 }
 
+/* Блок политики конфиденциальности: свёрстан мелко и приглушённо, чтобы не
+   отвлекать от призыва к регистрации, но оставаться доступным по ссылке
+   из формы. */
+.privacy-note {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px dashed var(--border);
+}
+
+.privacy-note > span {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.privacy-note p {
+  max-width: 70ch;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+/* Ссылка внутри согласия наследует цвет текста: подчёркивание достаточно
+   заметно, а акцентный цвет здесь перетягивал бы внимание с кнопки. */
+.consent a {
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.consent a:hover,
+.consent a:focus-visible {
+  color: var(--accent);
+}
+
 /* Responsive adjustments */
 @media (max-width: 960px) {
   .hero-layout,
@@ -728,12 +831,55 @@ h2 span {
   }
 }
 
+/* До 768px навигация не помещается в строку: wordmark + три ссылки требуют
+   больше ширины, чем есть у телефона, и страница получала горизонтальный
+   скролл (до 106px на 320px). Прячем меню в выпадающую панель. */
+@media (max-width: 767px) {
+  .nav-toggle {
+    display: inline-flex;
+  }
+
+  .main-nav {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    gap: 0;
+    padding: 8px 24px 16px;
+    /* Непрозрачный фон, а не полупрозрачный с blur: панель выходит за
+       пределы шапки, и её собственный backdrop-filter размывал контент
+       страницы так, что заголовок читался сквозь пункты меню. */
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 16px 24px rgba(0, 0, 0, 0.45);
+  }
+
+  .main-nav.is-open {
+    display: flex;
+  }
+
+  .main-nav a {
+    padding: 12px 0;
+    font-size: 15px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .main-nav a:last-child {
+    border-bottom: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
   .button,
   .main-nav a,
+  .nav-toggle-bar,
+  .nav-toggle-bar::before,
+  .nav-toggle-bar::after,
   input {
     transition: none;
   }
