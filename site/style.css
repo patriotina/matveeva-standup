@@ -317,15 +317,32 @@ h1 {
   width: 100%;
 }
 
-.installer-bar {
-  display: flex;
+/* Общая шапка «окна». Одна разметка на все три окна: установщик в hero,
+   коллаж участников и форма регистрации. */
+.window-bar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   padding: 10px 14px;
   background: var(--bg-card-muted);
   border-bottom: 1px solid var(--border);
   font-size: 11px;
   color: var(--text-muted);
+}
+
+/* Три колонки 1fr/auto/1fr держат заголовок ровно по центру окна,
+   независимо от ширины точек слева и подписи справа. */
+.window-title {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.window-meta {
+  justify-self: end;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
 }
 
 .window-dots {
@@ -718,16 +735,6 @@ h2 span {
   border: 1px solid var(--border-strong);
   border-radius: var(--r-md);
   overflow: hidden;
-}
-
-.form-topline {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 16px;
-  background: var(--bg-card-muted);
-  border-bottom: 1px solid var(--border);
-  font-size: 11px;
-  color: var(--text-muted);
 }
 
 .form-fields {
