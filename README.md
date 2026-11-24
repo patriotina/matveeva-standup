@@ -29,6 +29,8 @@ site/                     содержимое сайта (монтируетс�
   index.html
   style.css               стили: единственный источник, в HTML не дублируются
   script.js               меню на мобильных + отправка формы
+  speakers-760.webp       коллаж участников (собирается из speakers-only.png)
+  speakers-1100.webp
   favicon.ico/.svg        иконка вкладки (svg + растровый запас)
   apple-touch-icon.png    иконка для iOS
   icon-192.png            иконка для Android/манифеста
@@ -103,8 +105,7 @@ Settings → Secrets and variables → Actions, secrets:
 Контракт, который важно не нарушить при правках:
 
 - скрипт ждёт `application/x-www-form-urlencoded`; на `multipart/form-data`
-  (то есть на обычную `FormData`) он отвечает `405`;
-- поля: `surname`, `name`, `contact`, `occupation`, `consent=on`;
+  (то есть на обычную `FormData`) он отвечает `405`;- поля: `surname`, `name`, `contact`, `occupation`, `consent=on`;
 - ответ — JSON `{"ok":true}` или `{"ok":false,"error":"причина"}`;
 - Apps Script редиректит на `script.googleusercontent.com`, и оба ответа
   отдают `Access-Control-Allow-Origin: *`, поэтому ответ читается из браузера.
@@ -119,6 +120,29 @@ curl -L --data-urlencode 'surname=Тест' --data-urlencode 'name=Тест' \
   --data-urlencode 'contact=@test' --data-urlencode 'occupation=QA' \
   --data-urlencode 'consent=on' "<URL из action>"
 ```
+
+## Участники
+
+Коллаж лежит в `site/speakers-760.webp` и `site/speakers-1100.webp`, список
+участников — в разметке секции `#speakers`. Исходники (`speakers.png`,
+`speakers-only.png`) в репозиторий не входят: они в `.gitignore`, но остаются
+локально, чтобы можно было пересобрать картинку. Текстовый источник с
+описаниями — `speakers.txt` в корне репозитория; он не попадает в `site/`,
+поэтому не публикуется на сайте.
+
+Пересборка из исходника:
+
+```python
+from PIL import Image
+src = Image.open('site/speakers-only.png').convert('RGB')
+for width in (760, 1100):
+    h = round(src.height * width / src.width)
+    src.resize((width, h), Image.LANCZOS).save(
+        f'site/speakers-{width}.webp', 'WEBP', quality=80, method=6)
+```
+
+Текст участников правится в `site/index.html`; список должен совпадать по
+составу с коллажем.
 
 ## Что осталось сделать
 

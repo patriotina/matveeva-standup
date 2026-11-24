@@ -10,3 +10,9 @@ docker-compose.override.yml
 
 *.log
 .DS_Store
+
+# Исходники коллажа участников (~11 МБ). На сайт уходят только собранные
+# из них WebP: site/speakers-760.webp и site/speakers-1100.webp.
+# Файлы оставлены локально, чтобы можно было пересобрать картинку.
+site/speakers.png
+site/speakers-only.png
