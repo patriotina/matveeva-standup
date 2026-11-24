@@ -730,6 +730,25 @@ h2 span {
   border-top: 1px solid var(--border);
 }
 
+/* Канал — единственное место, где человек уже ждёт вестей о заявке,
+   поэтому ссылка стоит именно здесь, а не только в футере. */
+.registration-channel {
+  margin-top: 12px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.registration-channel a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.registration-channel a:hover,
+.registration-channel a:focus-visible {
+  color: var(--text);
+}
+
 .registration-form {
   background: var(--bg-card);
   border: 1px solid var(--border-strong);
@@ -839,6 +858,84 @@ h2 span {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-dim);
+}
+
+/* Партнёры: служебный блок между контактами в футере и политикой.
+   Оформлен как .privacy-note, поэтому читается как часть футера, а не
+   как отдельная секция. */
+.footer-credits {
+  margin-top: 28px;
+}
+
+/* Та же служебная подпись, что у .privacy-note > span: 10px с трекингом. */
+.credits-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+.credits-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 48px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.credit-link {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: fit-content;
+}
+
+.credit-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* Иконка контурная, как .fact-icon svg: заливной глиф выбивался бы
+   из остальных иконок страницы. */
+.credit-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.credit-name {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent);
+}
+
+/* Как в шапке uptimers.tech: домен приглушён относительно имени. */
+.credit-accent {
+  color: var(--text-muted);
+}
+
+.credit-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.credit-link:hover .credit-name,
+.credit-link:focus-visible .credit-name {
+  color: var(--text);
+}
+
+.credit-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
 }
 
 /* Блок политики конфиденциальности: свёрстан мелко и приглушённо, чтобы не
