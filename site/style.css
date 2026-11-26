@@ -687,6 +687,61 @@ h2 span {
   align-items: start;
 }
 
+/* Объявление о закрытии регистрации. Оформлено как ещё одно «окно»,
+   чтобы статус читался частью интерфейса, а не бегущей строкой. */
+.waitlist-notice {
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  margin-bottom: 40px;
+}
+
+.waitlist-body {
+  padding: 26px 26px 28px;
+}
+
+/* Главная строка объявления: крупнее остального текста секции, потому что
+   это первое, что человек должен прочитать над формой. */
+.waitlist-headline {
+  font-size: clamp(21px, 2.1vw, 27px);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  max-width: 60ch;
+}
+
+.waitlist-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+
+.waitlist-text {
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--text-muted);
+  max-width: 74ch;
+}
+
+/* Пояснение в форме: с закрытой регистрацией заявка значит другое. */
+.form-note {
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px dashed var(--border);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
 .donation-note {
   display: flex;
   gap: 12px;

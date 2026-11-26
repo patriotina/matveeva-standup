@@ -48,8 +48,8 @@
           <p class="hero-subline">Юмор установлен. Перезагрузка не требуется.</p>
           <p class="hero-lede">Вечер в формате стендапа для IT-сообщества и тех, кто рядом. Сами придумали, сами пошутим и отдохнем.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href="#registration"><span aria-hidden="true">&gt;</span> Зарегистрироваться</a>
-            <p class="hero-note">Вход donation. Регистрация обязательна! <br>Мест меньше, чем шуток в бэклоге</p>
+            <a class="button button-primary" href="#registration"><span aria-hidden="true">&gt;</span> В лист ожидания</a>
+            <p class="hero-note">Вход donation. Регистрация закрыта — открыт лист ожидания.</p>
           </div>
         </div>
 
@@ -197,11 +197,24 @@
     </section>
 
     <section class="section registration-section" id="registration">
+      <div class="container waitlist-notice">
+        <div class="window-bar">
+          <div class="window-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+          <span class="window-title mono">registration.exe</span>
+          <span class="window-meta mono">CLOSED</span>
+        </div>
+        <div class="waitlist-body">
+          <p class="waitlist-headline">Места заняли быстрее, чем мы успели пошутить про легаси.</p>
+          <p class="waitlist-status"><span class="status-dot"></span> Регистрация временно закрыта</p>
+          <p class="waitlist-text">Открыт лист ожидания, это сигнал организаторам сделать площадку крупнее и возможность попасть на мероприятие, когда часть людей откажутся.</p>
+        </div>
+      </div>
+
       <div class="container registration-layout">
         <div class="registration-copy">
           <p class="eyebrow"><span class="section-index">04</span> Регистрация</p>
           <h2>Готовы<br>к <span class="accent-phrase">запуску?</span></h2>
-          <p>Места ограничены вместимостью бара. Регистрация обязательна! </p>
+          <p>Места ограничены вместимостью бара.</p>
           <div class="donation-note">
             <span class="donation-symbol" aria-hidden="true">+</span>
             <p><strong>Вход — donation. </strong> По желанию вы можете поддержать участников, а также организацию следующих мероприятий (QR-код или наличные) любой комфортной суммой.</p>
@@ -219,10 +232,12 @@
         <form class="registration-form" id="registration-form" action="https://script.google.com/macros/s/AKfycbwpAiQOSpxKIJfKLmtVIElc3ghLdmc_x5gnd_-CG5mQUS04e3lFrE0c5dMtX_GXHlQF6Q/exec" method="POST" novalidate>
           <div class="window-bar">
             <div class="window-dots" aria-hidden="true"><i></i><i></i><i></i></div>
-            <span class="window-title mono">NEW_USER.exe</span>
-            <span class="window-meta mono">POST</span>
+            <span class="window-title mono">WAITLIST.exe</span>
+            <span class="window-meta mono">QUEUE</span>
           </div>
           <div class="form-fields">
+            <p class="form-note">Форма записывает в лист ожидания. Позовём, если место освободится.</p>
+
             <label for="surname">Фамилия *</label>
             <input id="surname" name="surname" type="text" autocomplete="family-name" placeholder="Фамилия" required>
 
@@ -240,8 +255,8 @@
               <span>Согласен(на) на обработку персональных данных согласно <a href="#privacy">политике конфиденциальности</a>.</span>
             </label>
 
-            <button class="button button-primary form-submit" type="submit"><span aria-hidden="true">&gt;</span> Отправить заявку</button>
-            <p class="form-message" id="form-message" role="status" aria-live="polite">После отправки организаторы свяжутся с вами для подтверждения.</p>
+            <button class="button button-primary form-submit" type="submit"><span aria-hidden="true">&gt;</span> Встать в лист ожидания</button>
+            <p class="form-message" id="form-message" role="status" aria-live="polite">Если место освободится, организаторы напишут вам первыми.</p>
           </div>
         </form>
       </div>
